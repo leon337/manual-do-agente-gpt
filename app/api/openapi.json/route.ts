@@ -35,6 +35,25 @@ export function GET(request: Request) {
           responses: { "200": { description: "Agent manifest", content: { "application/json": { schema: { type: "object" } } } } },
         },
       },
+      "/mcp": {
+        post: {
+          summary: "Call the public MCP tool server",
+          description: "MCP Streamable HTTP using JSON-RPC 2.0. Discover read-only tools with tools/list and invoke them with tools/call. Browser requests must be same-origin.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { type: "object", description: "MCP JSON-RPC request" },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "MCP protocol response or event stream" },
+            "400": { description: "Invalid MCP message" },
+            "403": { description: "Origin mismatch" },
+          },
+        },
+      },
       "/api/health": {
         get: {
           summary: "Check application and database connectivity",

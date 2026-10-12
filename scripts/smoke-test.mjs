@@ -25,7 +25,7 @@ await check("root machine index", "/", (_response, body) => {
 await check("LLM instructions", "/llms.txt", (response, body) => {
   assert.match(response.headers.get("content-type") || "", /text\/plain/i);
   assert.match(body, /OpenAPI 3\.1/);
-  assert.match(body, /no session, API key, cookie, or browser required/i);
+  assert.match(body, /anonymous HTTPS read access; no session or API key is required/i);
 }, "text/plain");
 
 await check("agent manifest", "/api/agent", (_response, body) => {
@@ -38,7 +38,7 @@ await check("agent manifest", "/api/agent", (_response, body) => {
 await check("OpenAPI contract", "/api/openapi.json", (_response, body) => {
   const spec = JSON.parse(body);
   assert.equal(spec.openapi, "3.1.0");
-  for (const path of ["/api/agent", "/api/manuals", "/api/manuals/{slug}", "/api/categories", "/api/health"]) {
+  for (const path of ["/api/agent", "/mcp", "/api/manuals", "/api/manuals/{slug}", "/api/categories", "/api/health"]) {
     assert.ok(spec.paths[path], `OpenAPI is missing ${path}`);
   }
 });
