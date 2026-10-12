@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const [totalResult, pageResult] = await Promise.all([
       pool.query(`SELECT COUNT(*)::int AS total FROM manuals m LEFT JOIN categories c ON c.id = m.category_id WHERE ${predicates}`, values),
       pool.query(
-        `SELECT m.id, m.slug, m.code, m.title, m.summary, m.tags, m.version, m.updated_at,
+        `SELECT m.id::int AS id, m.slug, m.code, m.title, m.summary, m.tags, m.version, m.updated_at,
                 c.name AS category_name, c.slug AS category_slug
          FROM manuals m LEFT JOIN categories c ON c.id = m.category_id
          WHERE ${predicates}

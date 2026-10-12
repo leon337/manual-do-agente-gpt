@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     const result = await pool.query(
-      `SELECT m.id, m.slug, m.code, m.title, m.summary, m.content_md, m.tags, m.version, m.updated_at,
+      `SELECT m.id::int AS id, m.slug, m.code, m.title, m.summary, m.content_md, m.tags, m.version, m.updated_at,
               c.name AS category_name, c.slug AS category_slug
        FROM manuals m LEFT JOIN categories c ON c.id = m.category_id
        WHERE m.slug = $1 AND m.status = 'published' LIMIT 1`,
