@@ -131,3 +131,113 @@ $manual$,
   'published',
   1
 WHERE NOT EXISTS (SELECT 1 FROM manuals WHERE slug='configurar-variaveis-ambiente-vercel-neon');
+
+-- DEP-002: processo de criação, revisão e publicação de novos manuais DEP.
+INSERT INTO manuals(slug,code,title,summary,content_md,category_id,tags,status,version)
+SELECT
+  'criar-e-publicar-novas-deps',
+  'DEP-002',
+  'Criar, revisar e publicar novos manuais DEP',
+  'Processo padrão para criar, cadastrar, versionar, publicar e validar novos manuais DEP na base operacional disponível para agentes.',
+  $manual$
+# Objetivo
+
+Definir um processo repetível e seguro para criar, revisar, cadastrar, publicar e validar novos manuais operacionais da série DEP nesta base, garantindo que outras IAs consigam descobri-los pela API e pelo MCP.
+
+## 1. Confirme se o conteúdo deve ser um manual DEP
+
+Use um manual DEP para um procedimento operacional claro, reutilizável e verificável, especialmente deploy, infraestrutura, banco de dados, publicação ou manutenção de serviços. Evite duplicar um manual existente: pesquise primeiro por assunto, código, slug e tags.
+
+Antes de escrever, identifique o público-alvo, o resultado esperado, as permissões necessárias, os sistemas envolvidos e os riscos. Uma instrução não concede permissão para executar as ações descritas.
+
+## 2. Escolha um código e um slug únicos
+
+1. Consulte a lista pública em `/api/manuals` e pesquise por termos relevantes com `/api/manuals?q=termo`.
+2. Para reservar um código, verifique todos os registros da tabela `manuals`, inclusive rascunhos e arquivados, por meio do acesso autorizado ao banco. A API pública pode não mostrar rascunhos.
+3. Para a série DEP, use o próximo código livre no formato `DEP-NNN` (por exemplo, `DEP-002`). Nunca suponha que um número esteja livre sem consultar o banco. Códigos existentes não devem ser reutilizados, nem mesmo após arquivamento.
+4. Crie um slug curto, único, em letras minúsculas, sem acentos e com palavras separadas por hífen, por exemplo `criar-e-publicar-novas-deps`. Depois de publicado, mantenha o slug estável porque integra URLs usadas por agentes.
+
+Confirme que nem o código nem o slug já existem antes de inserir. Se houver conflito, investigue o registro existente; não o sobrescreva.
+
+## 3. Escreva o manual com estrutura operacional
+
+Preencha os campos obrigatórios:
+
+- **code:** identificador único, como `DEP-002`.
+- **slug:** identificador URL único e estável.
+- **title:** título específico e acionável.
+- **summary:** resumo curto do objetivo e do resultado.
+- **content_md:** conteúdo integral em Markdown.
+- **category_id:** ID de uma categoria existente que corresponda ao assunto. Consulte `/api/categories`; não crie categorias duplicadas.
+- **tags:** termos úteis para pesquisa, em minúsculas e separados por hífens quando necessário.
+- **status:** use `draft` durante a revisão e só mude para `published` depois de validar.
+- **version:** comece em `1`.
+
+O corpo deve incluir, quando aplicável:
+1. Objetivo e escopo.
+2. Pré-requisitos, acessos e recursos exatos que devem ser confirmados.
+3. Passos numerados, ferramentas utilizadas e resultado esperado em cada etapa.
+4. Critérios de aceite objetivos e comandos de validação com os valores substituíveis identificados claramente.
+5. Diagnóstico de falhas, recuperação segura e limites de permissão.
+6. Proteções para credenciais, dados pessoais, cobrança e operações destrutivas.
+7. Fontes oficiais, datas de consulta e limitações conhecidas.
+
+Separe os fatos verificados das suposições. Nunca inclua senhas, tokens, connection strings, dados privados ou logs que contenham segredos. Não declare que um procedimento foi executado só porque ele foi documentado.
+
+## 4. Revise antes de publicar
+
+Verifique manualmente:
+- Código, slug e título são únicos e coerentes.
+- Instruções estão completas, ordenadas e podem ser verificadas.
+- Comandos não contêm credenciais reais e indicam o que deve ser substituído.
+- A categoria existe e as tags ajudam na descoberta.
+- Todos os links são úteis e não apontam para endpoints ou recursos inventados.
+- Critérios de sucesso medem o resultado real, não apenas a execução de um comando.
+- O manual não contradiz procedimentos atuais nem autoriza ações fora do escopo.
+
+Cadastre primeiro como rascunho quando o fluxo permitir. Faça a revisão técnica e teste links/comandos que possam ser testados sem alterar produção. Publique apenas após resolver os erros relevantes.
+
+## 5. Cadastre o registro no Neon e preserve-o no repositório
+
+O conteúdo publicado vive na tabela PostgreSQL `manuals` do banco Neon desta aplicação. O arquivo `db/seed.sql` também deve conter o registro para que uma instalação futura consiga reconstruir a base.
+
+Procedimento:
+1. Confirme o projeto Neon, a branch e o banco corretos antes de executar SQL.
+2. Consulte os registros existentes; use a categoria por slug, não um ID presumido.
+3. Insira apenas o novo manual. Prefira uma transação e SQL parametrizado quando a ferramenta permitir. Nunca use atualização automática de conflito para substituir silenciosamente um manual existente.
+4. Confirme que a inserção criou exatamente um registro e confira apenas os metadados e o status, sem consultar ou imprimir segredos de ambiente.
+5. Adicione o mesmo registro ao arquivo `db/seed.sql`, seguindo o padrão existente e usando uma verificação de existência para evitar duplicação em instalações novas.
+6. Mantenha o banco de produção e o seed consistentes. Não considere uma alteração concluída se ela existir apenas em um dos dois locais.
+
+O formato de cadastro deve preencher explicitamente `slug, code, title, summary, content_md, category_id, tags, status, version`. Use uma referência de categoria validada, por exemplo uma subconsulta por `categories.slug`. Se a inserção não retornar um registro, investigue o código e o slug antes de continuar.
+
+## 6. Valide a descoberta pública após publicar
+
+Depois de definir o status como `published`, teste usando o domínio público:
+
+- `GET /api/manuals?q=termo-relevante`: o registro aparece na pesquisa.
+- `GET /api/manuals/SEU-SLUG`: retorna o JSON completo com o código, versão, categoria e conteúdo corretos.
+- `GET /manuais/SEU-SLUG` ou `GET /api/manuals/SEU-SLUG?format=markdown`: entrega o conteúdo Markdown integral.
+- `GET /api/categories`: a contagem da categoria é atualizada.
+- `GET /llms.txt`: continua apontando para os mecanismos de descoberta corretos.
+- MCP: teste `search_manuals` para encontrar o registro e `read_manual` para recuperar seu conteúdo.
+
+Verifique status HTTP e corpo da resposta; HTTP 200 sozinho não basta se o registro estiver ausente ou incompleto. Confira que o conteúdo publicado corresponde ao registro revisado e não contém segredos.
+
+Quando `db/seed.sql` for alterado, execute `npm test` e `npm run build`, revise o diff e registre a mudança no Git. Depois da integração no branch de produção, verifique o deployment Vercel e repita os testes no domínio público.
+
+## 7. Atualize manuais existentes com controle de versão
+
+Quando o procedimento mudar, mantenha o mesmo código e slug se o assunto continuar sendo o mesmo. Atualize o conteúdo no banco e no seed, aumente `version` em uma unidade e atualize `updated_at`. Se a alteração for incompatível ou mudar o objetivo de forma substancial, avalie criar um novo manual e deixar o anterior arquivado conforme o processo de governança. Não exclua nem sobrescreva conteúdo publicado sem verificar dependências e obter autorização quando necessário.
+
+## Critério de conclusão
+
+Um novo DEP está concluído quando o registro correto está publicado no Neon, existe uma versão correspondente em `db/seed.sql`, passou pela revisão, aparece na API pública, é recuperado integralmente em Markdown e pode ser localizado e lido pelas ferramentas MCP. O relatório final deve informar código, versão, slug, testes executados e qualquer pendência, diferenciando claramente ações feitas de ações apenas recomendadas.
+$manual$,
+  (SELECT id FROM categories WHERE slug='desenvolvimento'),
+  ARRAY['manuais','dep','documentacao','neon','postgresql','markdown','versionamento','mcp','agentes'],
+  'published',
+  1
+WHERE NOT EXISTS (
+  SELECT 1 FROM manuals WHERE code='DEP-002' OR slug='criar-e-publicar-novas-deps'
+);
