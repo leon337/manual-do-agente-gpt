@@ -1,1 +1,8 @@
-import type {MetadataRoute} from "next";export default function robots():MetadataRoute.Robots{return {rules:{userAgent:"*",allow:"/"},sitemap:"/sitemap.xml"}}
+import type { MetadataRoute } from "next";
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: [{ userAgent: "*", allow: "/" }],
+    sitemap: "https://manual-do-agente-gpt.vercel.app/sitemap.xml",
+  };
+}

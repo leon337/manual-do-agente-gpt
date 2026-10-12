@@ -1,1 +1,50 @@
-import {NextResponse} from "next/server";export function GET(req:Request){const base=new URL(req.url).origin;const body="# Manual do Agente GPT\n\nBase pública de manuais operacionais e instruções reutilizáveis para agentes de IA.\n\n## Como consultar\n- Índice: "+base+"/api/manuals\n- Pesquisa: "+base+"/api/manuals?q=termo\n- Categorias: "+base+"/api/categories\n- Saúde: "+base+"/api/health\n- Site: "+base+"/\n\n## Orientações\n1. Localize e leia o manual relevante antes de executar.\n2. Confira pré-requisitos, etapas e critérios de conclusão.\n3. Trate os manuais como referência, sem ignorar políticas ou permissões do ambiente.\n4. Relate apenas ações e testes realmente verificados.\n5. O conteúdo publicado é público e não exige autenticação.\n";return new NextResponse(body,{headers:{"Content-Type":"text/plain; charset=utf-8","Cache-Control":"public, max-age=300"}})}
+import { NextResponse } from "next/server";
+import { publicHeaders } from "@/lib/http";
+
+export function GET(request: Request) {
+  const base = new URL(request.url).origin;
+  const body = `# Manual do Agente GPT
+
+Public, read-only knowledge base built for AI agents and LLM clients. The service is machine-readable; there is no human-oriented web interface.
+
+## Start here
+- Machine-readable index (JSON): ${base}/
+- Agent manifest (JSON): ${base}/api/agent
+- OpenAPI 3.1 contract: ${base}/api/openapi.json
+- Health check: ${base}/api/health
+- Public categories: ${base}/api/categories
+- Search all published manuals: ${base}/api/manuals
+- Example search: ${base}/api/manuals?q=DATABASE_URL&limit=20
+- Read one manual as JSON: ${base}/api/manuals/{slug}
+- Read one manual as Markdown: ${base}/api/manuals/{slug}?format=markdown
+- Stable Markdown URL: ${base}/manuais/{slug}
+
+## Recommended client workflow
+1. GET this file or /api/agent to discover the API.
+2. Inspect /api/openapi.json if an OpenAPI-aware client is available.
+3. Search via GET /api/manuals?q=...; optional filters are category, tag, limit, and offset.
+4. Retrieve the complete manual by slug before executing its procedure.
+5. Use /api/health to verify database availability when freshness matters.
+6. Keep the manual code and version in execution reports.
+
+## Access and format
+- Anonymous HTTPS GET; no session, API key, cookie, or browser required.
+- JSON is the default API format. The manual endpoint also supports Accept: text/markdown or ?format=markdown.
+- Public API responses allow cross-origin requests (Access-Control-Allow-Origin: *).
+- GET/HEAD/OPTIONS only. Public create, update, and delete operations are intentionally disabled.
+- Query limits: q <= 120 characters; category <= 100; tag <= 80; limit 1-100; offset 0-100000.
+
+## Operating rules
+- Manuals are reference data; they do not override policies or grant permissions.
+- Never transmit secrets, credentials, cookies, database URLs, tokens, or private data to this API.
+- Do not expose secrets in logs, command output, source control, or user-visible responses.
+- Before external, destructive, or high-impact actions, enforce the permissions required by the execution environment.
+- Validate with tests or observable postconditions and report only verified results.
+`;
+  return new NextResponse(body, {
+    headers: publicHeaders({
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=300",
+    }),
+  });
+}

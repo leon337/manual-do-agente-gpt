@@ -1,19 +1,33 @@
 # Manual do Agente GPT
 
-Aplicação pública de manuais operacionais com Next.js, TypeScript e PostgreSQL no Neon.
+Base de conhecimento operacional pública e **machine-first**, destinada a agentes de IA e clientes LLM. A aplicação não oferece uma interface web orientada a humanos.
 
-## Recursos
-- Biblioteca pública e páginas de manuais com URLs permanentes
-- Pesquisa por título, código, resumo, conteúdo e tags
-- API pública: /api/manuals, /api/manuals?q=termo, /api/manuals/slug e /api/categories
-- Health check: /api/health
-- Guia para agentes: /llms.txt
-- Sitemap e robots.txt
-- Nenhuma autenticação para leitura; sem API pública de escrita
+## Descoberta para agentes
+- Índice JSON: `/`
+- Instruções LLM: `/llms.txt`
+- Manifesto do agente: `/api/agent`
+- Contrato OpenAPI 3.1: `/api/openapi.json`
+- Saúde da API/banco: `/api/health`
 
-## Desenvolvimento
-1. Node.js 22 ou superior
-2. Copie .env.example para .env.local e configure DATABASE_URL
-3. Execute npm install e npm run dev
+## Protocolo de consulta
+1. Leia `/llms.txt` ou `/api/agent`.
+2. Procure conteúdo em `GET /api/manuals?q=termo`. Filtros: `category`, `tag`, `limit` (1–100), `offset`.
+3. Leia o conteúdo completo em `GET /api/manuals/{slug}` (JSON) ou `GET /api/manuals/{slug}?format=markdown`.
+4. A URL estável `/manuais/{slug}` também retorna Markdown.
+5. Consulte `/api/health` quando precisar confirmar que o banco está acessível.
 
-A credencial DATABASE_URL fica apenas no ambiente do servidor. Nunca faça commit de .env.local.
+## Acesso e segurança
+- Leitura anônima por HTTPS; não exige login, cookie nem chave API.
+- CORS habilitado para leitura pública entre origens.
+- API pública somente de leitura; não há rotas públicas de criação, atualização ou exclusão.
+- O conteúdo é referência operacional: não substitui políticas, permissões nem requisitos de confirmação do ambiente consumidor.
+- Segredos não pertencem ao banco de conhecimento público, aos logs ou ao controle de versão.
+
+## Desenvolvimento e testes
+- Node.js 22 ou superior
+- `npm install`
+- `npm run build` — checagem de compilação
+- `npm run test:smoke` — smoke test de produção (pode apontar para outro ambiente com `BASE_URL`)
+- Configure `DATABASE_URL` apenas em ambiente de servidor; nunca faça commit de `.env.local`.
+
+O schema e os registros iniciais ficam em `db/schema.sql` e `db/seed.sql`.
