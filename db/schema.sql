@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS categories(id BIGSERIAL PRIMARY KEY,slug TEXT NOT NULL UNIQUE,name TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS manuals(id BIGSERIAL PRIMARY KEY,slug TEXT NOT NULL UNIQUE,code TEXT NOT NULL UNIQUE,title TEXT NOT NULL,summary TEXT NOT NULL DEFAULT '',content_md TEXT NOT NULL,category_id BIGINT REFERENCES categories(id) ON DELETE SET NULL,tags TEXT[] NOT NULL DEFAULT '{}',status TEXT NOT NULL DEFAULT 'published' CHECK(status IN ('draft','published','archived')),version INTEGER NOT NULL DEFAULT 1,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE INDEX IF NOT EXISTS manuals_status_updated_idx ON manuals(status,updated_at DESC);
+CREATE INDEX IF NOT EXISTS manuals_category_idx ON manuals(category_id);
+CREATE INDEX IF NOT EXISTS manuals_tags_idx ON manuals USING GIN(tags);

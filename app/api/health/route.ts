@@ -1,0 +1,1 @@
+import {NextResponse} from "next/server";import {pool} from "@/lib/db";export async function GET(){try{const r=await pool.query("SELECT NOW() AS database_time");return NextResponse.json({status:"ok",database:"connected",database_time:r.rows[0].database_time})}catch{return NextResponse.json({status:"error",database:"unavailable"},{status:503})}}

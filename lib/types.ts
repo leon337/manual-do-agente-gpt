@@ -1,0 +1,1 @@
+export type Manual = { id:number; slug:string; code:string; title:string; summary:string; content_md:string; tags:string[]; version:number; updated_at:string; category_name?:string|null; category_slug?:string|null };

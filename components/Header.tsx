@@ -1,0 +1,1 @@
+export default function Header(){return <header className="topbar"><div className="shell nav"><a className="brand" href="/"><span className="mark">M</span><span>Manual do Agente GPT</span></a><nav className="links"><a href="/#manuais">Manuais</a><a href="/api/manuals">API pública</a><a href="/llms.txt">Para IA</a></nav></div></header>}
