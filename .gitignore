@@ -7,3 +7,4 @@ build/
 .vercel/
 *.log
 .DS_Store
+.vercel
