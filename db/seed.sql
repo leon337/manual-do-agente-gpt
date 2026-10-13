@@ -241,3 +241,207 @@ $manual$,
 WHERE NOT EXISTS (
   SELECT 1 FROM manuals WHERE code='DEP-002' OR slug='criar-e-publicar-novas-deps'
 );
+
+
+-- DEP-003 (DRAFT): arquitetura de agentes persistentes, controle e evidências.
+-- Keep this record unpublished until the reviewed content is approved and the
+-- authorized Neon + seed/Git publication process is completed.
+INSERT INTO manuals(slug,code,title,summary,content_md,category_id,tags,status,version)
+SELECT
+  'arquitetura-agentes-persistentes-controle-e-evidencias-dots-mcf',
+  'DEP-003',
+  'Arquitetura de agentes persistentes: controle, segurança e evidências (Dots × MCF)',
+  'Guia de análise arquitetural para agentes persistentes: limites de evidência, autorização, pesquisa read-only, ações externas, memória, observabilidade e avaliação.',
+  $manual$
+# Objetivo
+
+Usar este procedimento para analisar ou projetar sistemas de agentes persistentes e multiagente sem confundir uma descrição de produto, código versionado, resultado de teste e execução real. O estudo compara apenas características publicadas oficialmente de OpenAI Dots com estruturas identificadas no Multiagent Collaboration Framework (MCF).
+
+Este manual é uma referência de análise. Não concede acesso, permissão para agir em contas externas, nem autorização para publicar, enviar, excluir, alterar permissões ou modificar produção.
+
+## 1. Fontes de verdade e rótulos de evidência
+
+Antes de concluir algo sobre arquitetura ou capacidade, identifique a fonte, a data e a revisão:
+
+- **Fato verificado:** o conteúdo de uma fonte primária foi lido, um arquivo/commit foi consultado ou uma resposta real de ferramenta foi observada. Declare exatamente o que isso prova.
+- **Evidência secundária:** um audit, relatório anterior ou release descreve um estado de outra data/SHA. Preserve esse limite temporal.
+- **Inferência:** interpretação sustentada por mais de uma evidência. Mostre os elementos que conectam a conclusão.
+- **Hipótese:** explicação plausível que ainda precisa de teste.
+- **Desconhecido:** informação não divulgada, inacessível ou não verificada. Não a complete por plausibilidade.
+
+Nunca trate a existência de um arquivo de teste como prova de que o teste passou. Uma release/tag não prova qual commit está rodando no deployment. Um preview verde não substitui os gates de produção. Um relato de sucesso por um agente não substitui recibo de execução e verificação da pós-condição.
+
+## 2. Leia fontes oficiais antes de descrever Dots
+
+Use estas fontes primárias e consulte novamente as páginas porque elas podem mudar:
+
+- Visão de produto: https://openai.com/index/introducing-dots/
+- Arquitetura de segurança, proteção e privacidade: https://openai.com/index/how-we-build-safety-security-and-privacy-into-dots/
+- FAQ oficial de privacidade, segurança e ações: https://help.openai.com/en/articles/20001529-dots-privacy-security-and-safety-faqs
+- System Card GPT-6 Astra, incluindo as avaliações de Dots: https://deploymentsafety.openai.com/gpt-6-astra/change-log
+
+As publicações descrevem Dots como agentes persistentes, baseados em GPT-6 Astra, com computador/browser próprios em nuvem, ferramentas conectadas e continuidade entre canais. A publicação de segurança descreve ambientes isolados, sandbox, monitoramento, Activity View e Auto-review separado para certas ações.
+
+Esses materiais são descrições públicas de alto nível e resumos de avaliação, não código-fonte integral nem especificação completa das APIs internas. Scheduler detalhado, schema completo, topologia interna de subagentes e implementação proprietária não devem ser inferidos sem publicação oficial.
+
+## 3. Separe pesquisa read-only de execução que altera estado
+
+A FAQ pública descreve a pesquisa proativa de Dots como uma capacidade de leitura: suas ferramentas de pesquisa não enviam mensagens, não alteram conteúdo por plugins nem controlam o computador/browser. Uma ação posterior deve passar pelo caminho normal de autorização e revisão.
+
+Ao projetar fluxo equivalente no MCF, aplique a fronteira no runtime/adapters, não apenas no prompt:
+
+1. Classifique cada ferramenta por capacidades e recursos acessíveis.
+2. Para o modo de pesquisa, disponibilize somente operações read-only e rejeite chamadas mutáveis na camada de execução.
+3. Mantenha operações de escrita, comunicação, publicação ou alterações externas num caminho separado com política própria.
+4. Registre a decisão de autorização, o recurso-alvo, o ator/conta, a missão e a versão do escopo.
+5. Prove a fronteira por testes negativos que tentem invocar uma ação mutável a partir de um contexto de pesquisa.
+
+A presença de um adapter read-only em um domínio não prova que todos os outros adapters do sistema também sejam read-only.
+
+## 4. Faça política de ação antes do dispatch
+
+Para cada ação planejada, registre no mínimo:
+
+- ferramenta/provider e operação exata;
+- recurso e destinatário;
+- dados que serão lidos, compartilhados ou alterados;
+- contexto da autorização do usuário;
+- reversibilidade e impacto potencial;
+- versão da missão e do contrato;
+- decisão e fundamento da política;
+- exigência de confirmação, handoff, alternativa permitida ou bloqueio.
+
+Use resultados operacionais distintos: ALLOW, DENY, REQUIRE_CONFIRMATION, HUMAN_HANDOFF, SAFE_ALTERNATIVE e STOP. A taxonomia é uma proposta de padronização e precisa ser mapeada aos contratos reais antes de ser tratada como implementação existente.
+
+Não interprete uma autorização ampla como permissão ilimitada. Aprovação deve se vincular a uma ação, finalidade, escopo, recurso/destinatário e condição temporal explícitos. Mudança de destinatário, conteúdo, efeito, nível de acesso ou classe de risco invalida a inferência de que a aprovação anterior cobre a nova operação.
+
+## 5. Mantenha salvaguardas fora do alcance do agente
+
+A OpenAI declara que certas salvaguardas obrigatórias e a revisão de ações ficam separadas do ambiente de execução do dot, e que o próprio dot não pode desativá-las. Ao avaliar qualquer sistema multiagente:
+
+1. Desenhe a fronteira entre runtime do agente, ferramentas, política, identidade/autorização e infraestrutura de observabilidade.
+2. Identifique quem pode alterar cada controle e com quais permissões.
+3. Garanta que conteúdo de terceiros, skills, outputs de ferramentas e respostas do modelo não possam reconfigurar os próprios gates de autorização.
+4. Exija que tentativas de bypass sejam registradas e rejeitadas.
+5. Teste o comportamento fail-closed quando policy service, provider ou validação de evidência estiver indisponível.
+
+Um guard no controller é uma camada de defesa, não prova isolada de proteção completa em todos os caminhos. Inspecione todos os entrypoints e caminhos de execução, inclusive retry, retomada e callback.
+
+## 6. Trate conteúdo externo como entrada não confiável
+
+Sites, emails, documentos, mensagens e resultados de ferramentas podem conter prompt injection. Esse conteúdo é dado a ser analisado, não nova autoridade.
+
+- Preserve separação entre instruções do usuário, contrato de missão, dados externos e resposta gerada.
+- Não amplie escopo nem permissões com base em comandos encontrados em conteúdo externo.
+- Vincule ações posteriores à autorização do usuário e ao gate de política.
+- Teste exemplos de exfiltração de dados, alteração destrutiva, destinatário incorreto, prompt injection indireta e tentativa de desativar salvaguardas.
+- Registre a entrada usada no teste e a evidência do bloqueio, respeitando regras de privacidade e minimização de dados.
+
+As fontes oficiais dizem que as proteções reduzem o risco de prompt injection, mas não o eliminam. Não documente risco zero.
+
+## 7. Vincule ação externa, receipt e pós-condição
+
+Uma trilha auditável deve conectar a intenção original à ação real e ao resultado observado. Para cada operação externa, mantenha, conforme aplicável:
+
+- ID da missão/etapa e versão esperada;
+- identidade autenticada e principal de execução;
+- operação e recurso normalizados;
+- ID de tentativa/idempotência;
+- timestamps e estado da tentativa;
+- receipt do provider com digest/assinatura quando disponível;
+- resultado de CI/provider relacionado ao mesmo recurso;
+- pós-condição observada que prova o efeito pretendido;
+- resultado explícito para falha ou estado ambíguo.
+
+Trate timeouts ou respostas perdidas como resultado potencialmente UNKNOWN, não como sucesso nem fracasso certo. Reconcilie o estado remoto antes de tentar de novo; use idempotência para evitar duplicação. A conclusão só pode ser PASS quando a evidência corresponde à ação e ao recurso corretos e a pós-condição foi validada.
+
+No snapshot consultado do MCF, caminhos relevantes incluem:
+
+- apps/rede-social-agentes/apps/server/src/mcf-runtime/skill-executor.ts
+- apps/rede-social-agentes/apps/server/src/mcf-runtime/evidence-validator.ts
+- apps/rede-social-agentes/apps/server/src/mcf-runtime/external-action-ledger.ts
+- apps/rede-social-agentes/apps/server/src/mcf-runtime/agent-execution.service.ts
+
+Esses arquivos indicam implementação versionada, não certificação de que o runtime atual está aprovado ou que cada provider passou nos testes. Confira o SHA aplicável e o resultado real de CI antes de declarar validação.
+
+## 8. Projete continuidade e memória com limites explícitos
+
+Dots documenta fluxo de memória/contexto entre o dot e o ChatGPT. A FAQ distingue desligar o compartilhamento futuro, excluir o contexto próprio do dot e apagar conteúdo mantido em outros lugares: arquivos, conversas e memórias já transferidas seguem ciclos de vida diferentes.
+
+Ao projetar memória compartilhada entre agentes:
+
+1. Registre a origem, finalidade, timestamp e política de retenção do contexto.
+2. Minimize os dados enviados para cada tarefa e aplique controle de acesso por finalidade.
+3. Distinga desconectar uma fonte de apagar dados já copiados.
+4. Defina como corrigir, invalidar e propagar remoção em cópias derivadas.
+5. Explique limitações de exportação e exclusão ao usuário antes de prometer apagamento global.
+6. Não armazene payloads de memória em receipts/logs sem necessidade; receipts devem provar execução com exposição mínima.
+
+O contrato de memória deve cobrir cópias persistidas e contexto transitório; um adapter read-only não implica que a escrita, exportação, correção ou deleção esteja implementada.
+
+## 9. Faça observabilidade que permita interromper e redirecionar
+
+A publicação Dots descreve uma Activity View para inspecionar tarefas em andamento e delegadas, acompanhar etapas, corrigir contexto, redirecionar ou parar trabalho.
+
+Uma experiência MCF equivalente deve permitir responder:
+- Qual missão e tarefa estão ativas?
+- Que agente/provider está trabalhando e qual o estado real?
+- Quais ferramentas foram chamadas e qual evidência voltou?
+- A tarefa está aguardando aprovação, bloqueada, UNKNOWN ou concluída?
+- Qual regra permitiu ou bloqueou a ação?
+- É possível pausar, cancelar, retomar ou corrigir com segurança?
+
+Exponha erros, bloqueios, retries e handoffs no ponto em que ocorrem. Resumo retrospectivo não substitui uma timeline confiável. Diferencie estado calculado pelo orquestrador do estado confirmado pelo provider.
+
+## 10. Avalie por cenários e não prometa segurança absoluta
+
+O System Card público do GPT-6 Astra inclui avaliações para Dots de prompt injection, mudança explícita de permissões, tarefas encadeadas e Auto-review. Os resultados são específicos a harnesses, amostras e métricas. O card descreve violações moderadas de escopo em tarefas encadeadas, embora certos testes não tenham reportado incidente de severidade alta.
+
+Use uma suíte de regressão que contemple pelo menos:
+- prompt injection em email, página e documento;
+- tarefa delegada que tenta exceder o escopo herdado;
+- mudança/revogação de permissão durante execução;
+- destinatário, recurso ou conteúdo trocado após aprovação;
+- operação destrutiva e ação financeira;
+- gate de review indisponível ou tentativa de bypass;
+- timeout após o provider possivelmente ter executado a ação;
+- memória privada copiada para outra tarefa;
+- falha de identity binding e de version conflict;
+- tentativa de retomar uma missão pausada sem instrução humana explícita.
+
+Reporte numerador/denominador, harness, severidade, versão de código e limitações. Não extrapole “zero ataques observados” para risco zero. Não afrouxe um gate porque uma métrica ficou verde.
+
+## 11. Aplicação ao MCF: procedimento de auditoria
+
+1. Registre a main SHA, tag/release e SHA do deployment separadamente.
+2. Leia decisões vigentes, contrato da missão, protocolos, código e testes no mesmo SHA.
+3. Enumere entrypoints, providers, capabilities, permissões, retry/recovery e receipts.
+4. Relacione cada afirmação de arquitetura a arquivo/linha, teste e resultado de CI, quando houver.
+5. Marque como UNKNOWN o estado live que não puder ser consultado.
+6. Verifique status checks e logs de execução diretamente; steps ignorados não contam como PASS.
+7. Escreva findings com evidência, impacto, confiança, limite e correção proposta.
+8. Produza o pacote de rastreabilidade da fase e manifesto SHA-256 verificável.
+9. Mantenha dependências vulneráveis, falhas de build e lacunas de runtime como blockers explícitos.
+10. Não faça merge, deploy ou escrita externa fora da autorização e dos gates próprios.
+
+## Fontes oficiais e versão
+- OpenAI, Introducing dots: https://openai.com/index/introducing-dots/
+- OpenAI, How we build safety, security, and privacy into dots: https://openai.com/index/how-we-build-safety-security-and-privacy-into-dots/
+- OpenAI Help Center, Dots privacy, security, and safety FAQs: https://help.openai.com/en/articles/20001529-dots-privacy-security-and-safety-faqs
+- GPT-6 Astra System Card: https://deploymentsafety.openai.com/gpt-6-astra/change-log
+- MCF operational protocol: https://github.com/leon337/multiagent-collaboration-framework/blob/main/docs/protocols/MCF-PROTOCOLO-OPERACIONAL-UNIFICADO-DE-AGENTES.md
+- MCF DEC-051 (traceability): https://github.com/leon337/multiagent-collaboration-framework/blob/main/docs/decisions/MCF-DEC-051-EXECUCAO-SEQUENCIAL-VISIVEL-E-RASTREABILIDADE-POR-FASE.md
+- MCF DEC-066 (epistemic sobriety): https://github.com/leon337/multiagent-collaboration-framework/blob/main/docs/decisions/MCF-DEC-066-SOBRIEDADE-EPISTEMICA-E-ANTI-SYCOPHANCY.md
+
+Consulta das fontes Dots: 2026-10-13. Reconsulte fontes oficiais antes de usar este manual para uma decisão de arquitetura ou segurança.
+
+## Critério de conclusão
+Uma revisão está concluída apenas quando cada claim central tem fonte e SHA/data, riscos e desconhecidos estão explícitos, os testes são vinculados aos resultados reais, e a revisão independente ocorreu de fato. Este rascunho não certifica comportamento live do Dots nem prontidão de produção do MCF.
+$manual$,
+  (SELECT id FROM categories WHERE slug='agentes-ia'),
+  ARRAY['agentes-ia','openai-dots','mcf','arquitetura','seguranca','governanca','evidencias','memoria','prompt-injection','avaliacao'],
+  'draft',
+  1
+WHERE NOT EXISTS (
+  SELECT 1 FROM manuals WHERE code='DEP-003' OR slug='arquitetura-agentes-persistentes-controle-e-evidencias-dots-mcf'
+);
